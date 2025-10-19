@@ -29,9 +29,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadOvce();
   }
 
-  void _loadOvce() {
+  void _loadOvce() async {
+    final ovce = await _ovceService.getAllOvce();
     setState(() {
-      _ovce = _ovceService.getAllOvce();
+      _ovce = ovce;
     });
   }
 

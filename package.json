@@ -1,0 +1,13 @@
+{
+  "name": "ovce-databaze-monorepo",
+  "version": "1.0.0",
+  "description": "Sheep database monorepo with Flutter app and Node.js backend",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "install": "cd backend && npm install",
+    "build": "cd backend && npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

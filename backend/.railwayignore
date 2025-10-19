@@ -1,0 +1,13 @@
+# Ignore files outside backend
+../android/
+../ios/
+../lib/
+../linux/
+../macos/
+../test/
+../web/
+../windows/
+../.metadata
+../pubspec.yaml
+../pubspec.lock
+../analysis_options.yaml
