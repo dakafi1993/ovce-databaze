@@ -230,9 +230,12 @@ class ApiService {
   /// Kontrola internetového připojení
   Future<bool> hasInternetConnection() async {
     try {
+      print('🔍 Testuji připojení k: ${ApiConfig.apiUrl}/status');
       final response = await _dio.get('/status');
+      print('✅ API odpovědělo: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
+      print('❌ Chyba připojení k API: $e');
       return false;
     }
   }
