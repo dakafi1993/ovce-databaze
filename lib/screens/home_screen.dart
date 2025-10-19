@@ -5,6 +5,7 @@ import '../models/ovce.dart';
 import '../services/ovce_service_api.dart';
 import '../services/pdf_export_service.dart';
 import '../widgets/connection_status_widget.dart';
+import '../data/registr_ovci.dart';
 import 'nova_ovce_screen.dart';
 import 'detail_ovce_screen.dart';
 import 'live_detekce_screen.dart';
@@ -133,6 +134,35 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _importOvciZRegistru() async {
+    final potvrzeni = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('📋 Import z registru'),
+        content: Text(
+          'Chcete importovat všechny ovce z registru?\n\n'
+          'Bude přidáno 26 záznamů podle registračního dokumentu.\n'
+          'Data budou uložena na Railway server.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Zrušit'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Importovat'),
+          ),
+        ],
+      ),
+    );
+
+    if (potvrzeni == true) {
+      await RegistrOvci.pridejVsechnyOvce(context);
+      _loadOvce(); // Obnovit seznam
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,6 +170,13 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Import z registru',
+            onPressed: () async {
+              await _importOvciZRegistru();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.camera_alt),
             onPressed: () async {
@@ -222,11 +259,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                     ),
                     title: Text(
-                      'Ušní číslo: ${ovce.usiCislo}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      ovce.usiCislo,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     subtitle: Text(
-                      'Plemeno: ${ovce.plemeno}\nVěk: ${ovce.vek} let\nKategorie: ${ovce.kategorie}',
+                      '${ovce.plemeno} • ${ovce.kategorie}',
+                      style: TextStyle(color: Colors.grey[600]),
                     ),
                     onTap: () => _zobrazitDetail(ovce),
                     trailing: Row(
