@@ -7,11 +7,11 @@ class ApiConfig {
   // Při vývoji používáme localhost, později změníme na Railway URL
   static const String baseUrl = 'http://localhost:3000/api';
   
-  // Railway produkční URL (později vyplníme)
-  static const String railwayUrl = 'https://your-app.railway.app/api';
+  // Railway produkční URL 
+  static const String railwayUrl = 'https://ovce-databaze-production.up.railway.app/api';
   
   // Rozhodne jestli používáme lokální nebo produkční API
-  static bool get useProduction => false; // Zatím false pro vývoj
+  static bool get useProduction => true; // Nyní používáme Railway!
   
   static String get apiUrl => useProduction ? railwayUrl : baseUrl;
 }
