@@ -53,9 +53,9 @@ const Ovce = sequelize.define('Ovce', {
     defaultValue: ''
   },
   pohlavi: {
-    type: DataTypes.ENUM('M', 'F', 'UNKNOWN'),
+    type: DataTypes.ENUM('Samec', 'Samice', 'Nezn'),
     allowNull: false,
-    defaultValue: 'UNKNOWN'
+    defaultValue: 'Nezn'
   },
   poznamka: {
     type: DataTypes.TEXT,

@@ -10,6 +10,7 @@ require('dotenv').config();
 const { sequelize } = require('./config/database');
 const ovceRoutes = require('./routes/ovce');
 const uploadRoutes = require('./routes/upload');
+const importRoutes = require('./routes/import');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +85,7 @@ app.get('/api/status', async (req, res) => {
 // API routes
 app.use('/api/ovce', ovceRoutes);
 app.use('/api', uploadRoutes);
+app.use('/api', importRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -113,9 +115,19 @@ async function startServer() {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
     
-    // Sync database models
-    await sequelize.sync({ alter: false });
-    console.log('✅ Database models synchronized.');
+  // Sync database models
+  console.log('🔄 Starting database sync...');
+  // In production we MUST NOT use force: true because it drops tables and data on every restart.
+  // Use force only in development or when explicitly requested by env variable.
+  const isProduction = (process.env.NODE_ENV || 'development') === 'production';
+  const syncOptions = isProduction ? { logging: console.log } : { force: true, logging: console.log };
+  console.log(`🔧 Sync options: ${JSON.stringify(syncOptions)}`);
+  await sequelize.sync(syncOptions);
+  console.log('✅ Database models synchronized.');
+    
+    // Verify tables exist
+    const [results] = await sequelize.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+    console.log('📋 Created tables:', results.map(r => r.table_name));
     
     // Start server
     app.listen(PORT, '0.0.0.0', () => {

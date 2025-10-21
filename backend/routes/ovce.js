@@ -28,7 +28,7 @@ const validateOvce = [
     .withMessage('Neplatná kategorie'),
   body('pohlavi')
     .optional()
-    .isIn(['M', 'F', 'UNKNOWN'])
+    .isIn(['Samec', 'Samice', 'Nezn'])
     .withMessage('Neplatné pohlaví'),
   body('recognition_accuracy')
     .optional()
