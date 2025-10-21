@@ -44,9 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadOvce() async {
     try {
+      print('🔄 HomeScreen: Spouštím načítání ovcí...');
       // Inicializujeme servis při prvním načtení
       await _ovceService.initialize();
       final ovce = await _ovceService.getAllOvce();
+      print('🏠 HomeScreen: Načteno ${ovce.length} ovcí');
+      for (var i = 0; i < ovce.length && i < 3; i++) {
+        print('🐑 HomeScreen: Ovce ${i+1}: ${ovce[i].usiCislo} - ${ovce[i].plemeno} - ${ovce[i].kategorie}');
+      }
       setState(() {
         _ovce = ovce;
         _applyFilters();
@@ -54,6 +59,27 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       print('❌ Chyba při načítání ovcí: $e');
       // Zůstane prázdný seznam
+    }
+  }
+
+  // Debug funkce pro vymazání cache
+  void _clearCacheAndReload() async {
+    try {
+      print('🧹 Mažu cache a načítám čerstvá data...');
+      await _ovceService.clearCacheAndReload();
+      _loadOvce();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cache vymazána, data aktualizována')),
+        );
+      }
+    } catch (e) {
+      print('❌ Chyba při mazání cache: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Chyba při mazání cache: $e')),
+        );
+      }
     }
   }
 
@@ -247,6 +273,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _clearCacheAndReload,
+            tooltip: 'Vymazat cache a obnovit data',
+          ),
           IconButton(
             icon: const Icon(Icons.camera_alt),
             onPressed: () async {

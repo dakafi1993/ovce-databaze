@@ -68,6 +68,38 @@ class OvceService {
     }
   }
 
+  /// Vymaže cache a načte čerstvá data ze serveru
+  Future<void> clearCacheAndReload() async {
+    try {
+      print('🧹 Mažu cache...');
+      
+      // Vymazat cache z paměti
+      _cachedOvce.clear();
+      
+      // Vymazat cache z SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('ovce_data_cache');
+      
+      print('✅ Cache vymazána');
+      
+      // Zkontrolovat připojení a načíst čerstvá data
+      await _checkConnection();
+      
+      if (_isOnline) {
+        print('🌐 Načítám čerstvá data ze serveru...');
+        final serverOvce = await _apiService.getAllOvce();
+        _cachedOvce = serverOvce;
+        await _saveCachedData();
+        print('✅ Načteno ${_cachedOvce.length} čerstvých ovcí ze serveru');
+      } else {
+        print('❌ Offline - nelze načíst čerstvá data');
+      }
+    } catch (e) {
+      print('❌ Chyba při mazání cache: $e');
+      rethrow;
+    }
+  }
+
   /// Synchronizace s serverem
   Future<void> _syncWithServer() async {
     if (!_isOnline) return;
