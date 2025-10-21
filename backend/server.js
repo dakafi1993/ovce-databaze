@@ -11,6 +11,7 @@ const { sequelize } = require('./config/database');
 const ovceRoutes = require('./routes/ovce');
 const uploadRoutes = require('./routes/upload');
 const importRoutes = require('./routes/import');
+const migrateAndImport = require('./scripts/migrate-and-import');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,6 +60,27 @@ app.get('/health', (req, res) => {
       .then(() => 'connected')
       .catch(() => 'disconnected')
   });
+});
+
+// Manual migration endpoint
+app.post('/api/migrate-and-import', async (req, res) => {
+  try {
+    console.log('🔄 Spouštím manuální migraci a import...');
+    await migrateAndImport();
+    res.json({
+      status: 'success',
+      message: 'Migration a import dat úspěšně dokončen',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Chyba při migraci:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Chyba při migraci a importu dat',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // API status endpoint

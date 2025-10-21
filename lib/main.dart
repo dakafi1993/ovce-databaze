@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 void main() {
   runApp(const OvceDatabaze());
@@ -16,7 +16,7 @@ class OvceDatabaze extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const HomeScreen(title: 'Databáze Ovcí'),
+      home: const MainNavigationScreen(),
     );
   }
 }

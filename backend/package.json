@@ -10,8 +10,9 @@
     "seed": "node scripts/seed.js",
     "import-data": "node scripts/import-original-data.js",
     "import-data-clear": "node scripts/import-original-data.js --clear-existing",
+    "migrate-and-import": "node scripts/migrate-and-import.js",
     "build": "echo 'Build completed'",
-    "railway-deploy": "npm install && npm run migrate"
+    "railway-deploy": "npm install && npm run migrate-and-import"
   },
   "keywords": [
     "api",

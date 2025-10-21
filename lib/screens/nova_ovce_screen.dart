@@ -11,8 +11,16 @@ import '../services/biometric_extraction_service.dart';
 class NovaOvceScreen extends StatefulWidget {
   final Function(Ovce) onSave;
   final Ovce? ovce; // Pro editaci existující ovce
+  final Map<String, dynamic>? initialData; // Předvyplněná data z detekce
+  final String? initialPhotoPath; // Počáteční fotka
 
-  const NovaOvceScreen({super.key, required this.onSave, this.ovce});
+  const NovaOvceScreen({
+    super.key, 
+    required this.onSave, 
+    this.ovce,
+    this.initialData,
+    this.initialPhotoPath,
+  });
 
   @override
   State<NovaOvceScreen> createState() => _NovaOvceScreenState();
@@ -39,6 +47,7 @@ class _NovaOvceScreenState extends State<NovaOvceScreen> {
   void initState() {
     super.initState();
     print('🚀 NovaOvceScreen initState - skenování dokumentu je dostupné!');
+    
     // Pokud editujeme existující ovci, naplníme formulář
     if (widget.ovce != null) {
       final ovce = widget.ovce!;
@@ -52,6 +61,28 @@ class _NovaOvceScreenState extends State<NovaOvceScreen> {
       _poznamkaController.text = ovce.poznamka;
       _fotky = List.from(ovce.fotky);
       _datumNarozeni = ovce.datumNarozeni;
+    }
+    
+    // Pokud máme předvyplněná data z detekce
+    if (widget.initialData != null) {
+      final data = widget.initialData!;
+      _plemenoController.text = data['plemeno'] ?? '';
+      _kategorieController.text = data['kategorie'] ?? '';
+      _poznamkaController.text = data['poznamky'] ?? '';
+      
+      // Pokud je datum registrace definován, použijeme ho jako datum narození (default)
+      if (data['datumRegistrace'] != null) {
+        try {
+          _datumNarozeni = DateTime.parse(data['datumRegistrace']);
+        } catch (e) {
+          print('Chyba při parsování data registrace: $e');
+        }
+      }
+    }
+    
+    // Pokud máme počáteční fotku, přidáme ji
+    if (widget.initialPhotoPath != null) {
+      _fotky.add(widget.initialPhotoPath!);
     }
   }
 

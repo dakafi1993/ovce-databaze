@@ -5,7 +5,6 @@ import '../models/ovce.dart';
 import '../services/ovce_service_api.dart';
 import '../services/pdf_export_service.dart';
 import '../widgets/connection_status_widget.dart';
-import '../data/registr_ovci.dart';
 import 'nova_ovce_screen.dart';
 import 'detail_ovce_screen.dart';
 import 'live_detekce_screen.dart';
@@ -22,7 +21,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final OvceService _ovceService = OvceService();
   final PdfExportService _pdfExportService = PdfExportService();
-  late List<Ovce> _ovce;
+  List<Ovce> _ovce = [];
+  List<Ovce> _filteredOvce = [];
+  
+  // Filtry
+  String? _selectedKategorie;
+  int? _selectedRok;
+  int? _selectedMesic;
+  
+  // Dostupné hodnoty pro filtry
+  final List<String> _kategorie = ['BER', 'BAH', 'JEH', 'OTHER'];
+  final List<String> _mesice = [
+    'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
+    'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'
+  ];
 
   @override
   void initState() {
@@ -31,10 +43,86 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadOvce() async {
-    final ovce = await _ovceService.getAllOvce();
+    try {
+      // Inicializujeme servis při prvním načtení
+      await _ovceService.initialize();
+      final ovce = await _ovceService.getAllOvce();
+      setState(() {
+        _ovce = ovce;
+        _applyFilters();
+      });
+    } catch (e) {
+      print('❌ Chyba při načítání ovcí: $e');
+      // Zůstane prázdný seznam
+    }
+  }
+
+  /// Aplikuje filtry na seznam ovcí
+  void _applyFilters() {
+    _filteredOvce = _ovce.where((ovce) {
+      // Filtr podle kategorie
+      if (_selectedKategorie != null && ovce.kategorie != _selectedKategorie) {
+        return false;
+      }
+      
+      // Filtr podle roku narození
+      if (_selectedRok != null && ovce.datumNarozeni.year != _selectedRok) {
+        return false;
+      }
+      
+      // Filtr podle měsíce narození  
+      if (_selectedMesic != null && ovce.datumNarozeni.month != _selectedMesic) {
+        return false;
+      }
+      
+      return true;
+    }).toList();
+  }
+
+  /// Resetuje všechny filtry
+  void _resetFilters() {
     setState(() {
-      _ovce = ovce;
+      _selectedKategorie = null;
+      _selectedRok = null;
+      _selectedMesic = null;
+      _applyFilters();
     });
+  }
+
+  /// Získá dostupné roky narození z dat
+  List<int> _getAvailableYears() {
+    final years = _ovce.map((ovce) => ovce.datumNarozeni.year).toSet().toList();
+    years.sort((a, b) => b.compareTo(a)); // Řazení sestupně
+    return years;
+  }
+
+  /// Vytvoří dropdown widget pro filtry
+  Widget _buildFilterDropdown<T>({
+    required String label,
+    required T? value,
+    required List<T> items,
+    required Function(T?) onChanged,
+    String Function(T)? displayName,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButton<T>(
+        hint: Text(label),
+        value: value,
+        underline: Container(),
+        items: items.map((item) {
+          return DropdownMenuItem<T>(
+            value: item,
+            child: Text(displayName?.call(item) ?? item.toString()),
+          );
+        }).toList(),
+        onChanged: onChanged,
+      ),
+    );
   }
 
   void _zobrazitFormular() async {
@@ -114,10 +202,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _exportToPdf(String action) async {
     try {
+      // Použít filtrované ovce pro export
+      final exportData = _filteredOvce.isNotEmpty ? _filteredOvce : _ovce;
+      
+      // Vytvořit popis filtrů pro PDF
+      String filterInfo = 'Kompletní seznam';
+      if (_filteredOvce.length != _ovce.length) {
+        List<String> activeFilters = [];
+        if (_selectedKategorie != null) activeFilters.add('Kategorie: $_selectedKategorie');
+        if (_selectedRok != null) activeFilters.add('Rok: $_selectedRok');
+        if (_selectedMesic != null) activeFilters.add('Měsíc: ${_mesice[_selectedMesic! - 1]}');
+        filterInfo = 'Filtrováno: ${activeFilters.join(', ')} (${_filteredOvce.length} z ${_ovce.length})';
+      }
+      
       await _pdfExportService.exportOvceToPDF(
-        _ovce,
+        exportData,
         action: action,
         customFileName: 'ovce_registr_${DateTime.now().day}_${DateTime.now().month}_${DateTime.now().year}.pdf',
+        filterInfo: filterInfo,
       );
       
       if (mounted && action == 'save') {
@@ -134,34 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _importOvciZRegistru() async {
-    final potvrzeni = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('📋 Import z registru'),
-        content: Text(
-          'Chcete importovat všechny ovce z registru?\n\n'
-          'Bude přidáno 26 záznamů podle registračního dokumentu.\n'
-          'Data budou uložena na Railway server.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Zrušit'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Importovat'),
-          ),
-        ],
-      ),
-    );
 
-    if (potvrzeni == true) {
-      await RegistrOvci.pridejVsechnyOvce(context);
-      _loadOvce(); // Obnovit seznam
-    }
-  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -170,13 +247,6 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            tooltip: 'Import z registru',
-            onPressed: () async {
-              await _importOvciZRegistru();
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.camera_alt),
             onPressed: () async {
@@ -190,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.picture_as_pdf),
-            onPressed: _ovce.isNotEmpty ? _showExportOptions : null,
+            onPressed: _filteredOvce.isNotEmpty ? _showExportOptions : null,
             tooltip: 'Export do PDF',
           ),
         ],
@@ -226,10 +296,92 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             )
-          : ListView.builder(
-              itemCount: _ovce.length,
-              itemBuilder: (context, index) {
-                final ovce = _ovce[index];
+          : Column(
+              children: [
+                // Filtry
+                Container(
+                  padding: const EdgeInsets.all(8.0),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        // Filtr podle kategorie
+                        _buildFilterDropdown<String>(
+                          label: 'Kategorie',
+                          value: _selectedKategorie,
+                          items: _kategorie,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedKategorie = value;
+                              _applyFilters();
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        // Filtr podle roku
+                        _buildFilterDropdown<int>(
+                          label: 'Rok',
+                          value: _selectedRok,
+                          items: _getAvailableYears(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRok = value;
+                              _applyFilters();
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        // Filtr podle měsíce
+                        _buildFilterDropdown<int>(
+                          label: 'Měsíc',
+                          value: _selectedMesic,
+                          items: List.generate(12, (i) => i + 1),
+                          displayName: (month) => _mesice[month - 1],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedMesic = value;
+                              _applyFilters();
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        
+                        // Reset filtry
+                        if (_selectedKategorie != null || _selectedRok != null || _selectedMesic != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            tooltip: 'Resetovat filtry',
+                            onPressed: _resetFilters,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                
+                // Počet výsledků
+                if (_filteredOvce.length != _ovce.length)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.filter_list, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Zobrazeno ${_filteredOvce.length} z ${_ovce.length} ovcí',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                
+                // Seznam ovcí
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _filteredOvce.length,
+                    itemBuilder: (context, index) {
+                      final ovce = _filteredOvce[index];
                 return Card(
                   margin: const EdgeInsets.all(8.0),
                   child: ListTile(
@@ -342,34 +494,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Zelený FAB pro live detekci  
-          FloatingActionButton.extended(
-            heroTag: "live_detection",
-            onPressed: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => LiveDetekceScreen(),
-                ),
-              );
-            },
-            backgroundColor: Colors.green,
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('LIVE DETEKCE'),
-          ),
-          const SizedBox(height: 10),
-          // Modré FAB pro přidání ovce
-          FloatingActionButton.extended(
-            heroTag: "add_sheep",
-            onPressed: _zobrazitFormular,
-            backgroundColor: Colors.blue,
-            icon: const Icon(Icons.add),
-            label: const Text('PŘIDAT OVCI'),
-          ),
-        ],
-      ),
+                  ),
+              ],
+            ),
     );
   }
 }

@@ -4,6 +4,13 @@ import 'package:image_picker/image_picker.dart';
 import '../services/live_ovce_recognition_service.dart';
 
 class LiveDetekceScreen extends StatefulWidget {
+  final bool isSmartAddMode;
+  
+  const LiveDetekceScreen({
+    super.key,
+    this.isSmartAddMode = false,
+  });
+
   @override
   _LiveDetekceScreenState createState() => _LiveDetekceScreenState();
 }
@@ -257,44 +264,92 @@ class _LiveDetekceScreenState extends State<LiveDetekceScreen> {
   }
 
   Future<void> _captureAndAnalyze() async {
-    if (_detectedOvce.isNotEmpty) {
-      final bestMatch = _detectedOvce.reduce((a, b) => 
-        a.confidence > b.confidence ? a : b);
-      
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Nejlepší shoda'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Ušní číslo: ${bestMatch.ovce.usiCislo}'),
-              Text('Jméno: ${bestMatch.ovce.jmeno}'),
-              Text('Plemeno: ${bestMatch.ovce.plemeno}'),
-              Text('Spolehlivost: ${(bestMatch.confidence * 100).toInt()}%'),
+    if (widget.isSmartAddMode) {
+      // V smart add mode - udělat fotku a vrátit data pro formulář
+      await _smartCapture();
+    } else {
+      // Normální režim - ukázat detekované ovce
+      if (_detectedOvce.isNotEmpty) {
+        final bestMatch = _detectedOvce.reduce((a, b) => 
+          a.confidence > b.confidence ? a : b);
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Nejlepší shoda'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Ušní číslo: ${bestMatch.ovce.usiCislo}'),
+                Text('Jméno: ${bestMatch.ovce.jmeno}'),
+                Text('Plemeno: ${bestMatch.ovce.plemeno}'),
+                Text('Spolehlivost: ${(bestMatch.confidence * 100).toInt()}%'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('OK'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context, bestMatch.ovce);
+                },
+                child: Text('Vybrat'),
+              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context, bestMatch.ovce);
-              },
-              child: Text('Vybrat'),
-            ),
-          ],
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Žádné ovce nebyly detekovány')),
+        );
+      }
+    }
+  }
+
+  /// Smart capture pro přidávání nové ovce
+  Future<void> _smartCapture() async {
+    try {
+      if (_cameraController == null || !_cameraController!.value.isInitialized) {
+        throw Exception('Kamera není inicializována');
+      }
+
+      // Udělat fotku
+      final image = await _cameraController!.takePicture();
+      
+      // Pokusit se detekovat charakteristiky ovce (základní analýza)
+      final detectedData = await _analyzeNewSheep(image.path);
+      
+      // Vrátit data pro formulář
+      Navigator.pop(context, {
+        'photoPath': image.path,
+        'detectedData': detectedData,
+      });
+      
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Chyba při pořizování fotky: ${e.toString()}'),
+          backgroundColor: Colors.red,
         ),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Žádné ovce nebyly detekovány')),
-      );
     }
+  }
+
+  /// Analyzuje novou ovci a pokusí se detekovat základní charakteristiky
+  Future<Map<String, dynamic>> _analyzeNewSheep(String imagePath) async {
+    // Zde by byla pokročilá analýza - zatím vrátíme základní data
+    final now = DateTime.now();
+    
+    return {
+      'kategorie': 'OTHER', // Výchozí kategorie
+      'plemeno': 'Neznámé', // Výchozí plemeno
+      'datumRegistrace': now.toIso8601String(),
+      'poznamky': 'Přidáno pomocí live detekce dne ${now.day}.${now.month}.${now.year}',
+    };
   }
 
   Future<void> _detectFromPhoto() async {
