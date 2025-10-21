@@ -91,19 +91,30 @@ class OvceService {
 
   /// Získá všechny ovce
   Future<List<Ovce>> getAllOvce() async {
+    print('🐑 OVCE SERVICE - getAllOvce() started');
     await _checkConnection();
+    
+    print('🌐 Connection status: ${_isOnline ? "ONLINE" : "OFFLINE"}');
+    print('📦 Current cache size: ${_cachedOvce.length}');
     
     if (_isOnline) {
       try {
+        print('📡 Fetching from server...');
         final serverOvce = await _apiService.getAllOvce();
+        print('✅ Server returned ${serverOvce.length} sheep');
+        
         _cachedOvce = serverOvce;
         await _saveCachedData();
+        
+        print('💾 Data cached successfully');
         return serverOvce;
       } catch (e) {
         print('❌ Chyba při načítání ze serveru, používám cache: $e');
+        print('📦 Returning ${_cachedOvce.length} cached sheep');
         return _cachedOvce;
       }
     } else {
+      print('📱 Offline mode - returning ${_cachedOvce.length} cached sheep');
       return _cachedOvce;
     }
   }

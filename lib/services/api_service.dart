@@ -49,19 +49,39 @@ class ApiService {
   /// Získá všechny ovce ze serveru
   Future<List<Ovce>> getAllOvce() async {
     try {
-      print('📡 Získávám všechny ovce ze serveru...');
+      print('📡 API SERVICE - Getting all sheep from server...');
+      print('🔗 Request URL: ${ApiConfig.apiUrl}/ovce');
+      
       final response = await _dio.get('/ovce');
+      
+      print('📨 Response status: ${response.statusCode}');
+      print('📄 Response data keys: ${response.data?.keys?.toList() ?? "null"}');
       
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'] ?? response.data;
+        print('📋 Raw data length: ${data.length}');
+        
+        if (data.isNotEmpty) {
+          print('📄 Sample record: ${data.first}');
+        }
+        
         final ovce = data.map((json) => Ovce.fromApiJson(json)).toList();
-        print('✅ Načteno ${ovce.length} ovcí ze serveru');
+        print('✅ Successfully parsed ${ovce.length} sheep from server');
+        
+        if (ovce.isNotEmpty) {
+          print('🐑 Sample parsed sheep: ${ovce.first.usiCislo} (${ovce.first.plemeno})');
+        }
+        
         return ovce;
       } else {
         throw Exception('Chyba při načítání ovcí: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Chyba při načítání ovcí: $e');
+      print('❌ API SERVICE ERROR: $e');
+      if (e is DioException && e.response != null) {
+        print('📨 Error response: ${e.response?.data}');
+        print('📨 Error status: ${e.response?.statusCode}');
+      }
       rethrow;
     }
   }

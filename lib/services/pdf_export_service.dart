@@ -7,12 +7,12 @@ import '../models/ovce.dart';
 
 class PdfExportService {
   
-  Future<pw.Document> createOvceRegistrPdf(List<Ovce> ovce) async {
+  Future<pw.Document> createOvceRegistrPdf(List<Ovce> ovce, {String? filterInfo}) async {
     final pdf = pw.Document();
     final now = DateTime.now();
     
-    // Omezit na prvních 10 podle dokumentu
-    final displayedOvce = ovce.take(10).toList();
+    // Použít všechny poskytnuté ovce (už filtrované)
+    final displayedOvce = ovce;
 
     pdf.addPage(
       pw.Page(
@@ -40,8 +40,8 @@ class PdfExportService {
                     ],
                   ),
                   pw.Text(
-                    "Tiskne se pouze prvních 10",
-                    style: pw.TextStyle(fontSize: 8, color: PdfColors.red),
+                    filterInfo ?? "Kompletní seznam",
+                    style: pw.TextStyle(fontSize: 8, color: PdfColors.blue),
                   ),
                 ],
               ),
@@ -190,8 +190,8 @@ class PdfExportService {
     );
   }
 
-  Future<void> exportOvceToPDF(List<Ovce> ovce, {String action = 'save', String? customFileName}) async {
-    final pdf = await createOvceRegistrPdf(ovce);
+  Future<void> exportOvceToPDF(List<Ovce> ovce, {String action = 'save', String? customFileName, String? filterInfo}) async {
+    final pdf = await createOvceRegistrPdf(ovce, filterInfo: filterInfo);
     final fileName = customFileName ?? 'ovce_registr_${DateTime.now().millisecondsSinceEpoch}.pdf';
 
     switch (action) {
