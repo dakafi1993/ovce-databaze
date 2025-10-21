@@ -11,6 +11,7 @@ const { sequelize } = require('./config/database');
 const ovceRoutes = require('./routes/ovce');
 const uploadRoutes = require('./routes/upload');
 const importRoutes = require('./routes/import');
+const replaceDataRoutes = require('./routes/replace-data');
 const migrateAndImport = require('./scripts/migrate-and-import');
 
 const app = express();
@@ -108,6 +109,7 @@ app.get('/api/status', async (req, res) => {
 app.use('/api/ovce', ovceRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api', importRoutes);
+app.use('/api', replaceDataRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
