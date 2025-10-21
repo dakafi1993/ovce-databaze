@@ -12,6 +12,7 @@ const ovceRoutes = require('./routes/ovce');
 const uploadRoutes = require('./routes/upload');
 const importRoutes = require('./routes/import');
 const replaceDataRoutes = require('./routes/replace-data');
+const fixDataRoutes = require('./routes/fix-data');
 const migrateAndImport = require('./scripts/migrate-and-import');
 
 const app = express();
@@ -110,6 +111,7 @@ app.use('/api/ovce', ovceRoutes);
 app.use('/api', uploadRoutes);
 app.use('/api', importRoutes);
 app.use('/api', replaceDataRoutes);
+app.use('/api', fixDataRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
