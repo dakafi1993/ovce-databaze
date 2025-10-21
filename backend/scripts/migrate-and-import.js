@@ -1,7 +1,97 @@
 #!/usr/bin/env node
 
-const { sequelize } = require('../config/database');
-const Ovce = require('../models/Ovce');
+// Vytvoříme vlastní instanci Sequelize pro migraci, aby jsme nezavřeli hlavní connection pool
+const { Sequelize, DataTypes } = require('sequelize');
+
+// Vlastní Sequelize instance pro migration
+const migrationSequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  dialectOptions: {
+    ssl: process.env.NODE_ENV === 'production' ? {
+      require: true,
+      rejectUnauthorized: false
+    } : false
+  },
+  logging: console.log
+});
+
+// Definujeme model Ovce pro migration
+const Ovce = migrationSequelize.define('Ovce', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
+  },
+  usi_cislo: {
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    unique: true,
+    validate: {
+      notEmpty: true,
+      len: [1, 50]
+    }
+  },
+  datum_narozeni: {
+    type: DataTypes.DATEONLY,
+    allowNull: false,
+    validate: {
+      isDate: true,
+      isBefore: new Date().toISOString()
+    }
+  },
+  matka: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    defaultValue: ''
+  },
+  otec: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    defaultValue: ''
+  },
+  plemeno: {
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    validate: {
+      notEmpty: true,
+      len: [1, 100]
+    }
+  },
+  kategorie: {
+    type: DataTypes.ENUM('BER', 'BAH', 'JEH', 'OTHER'),
+    allowNull: false,
+    defaultValue: 'OTHER'
+  },
+  cislo_matky: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    defaultValue: ''
+  },
+  cislo_otce: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    defaultValue: ''
+  },
+  poznamky: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    defaultValue: ''
+  },
+  fotky: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  biometric_data: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null
+  }
+}, {
+  tableName: 'Ovces',
+  timestamps: true
+});
 
 // Import data
 const sheepData = [
@@ -296,12 +386,12 @@ const sheepData = [
 async function migrateAndImport() {
   try {
     console.log('🔄 Připojuji se k databázi...');
-    await sequelize.authenticate();
+    await migrationSequelize.authenticate();
     console.log('✅ Připojení k databázi úspěšné');
 
     console.log('🔄 Synchronizuji tabulky...');
     // force: true vytvoří tabulky od začátku (v prázdné DB je to bezpečné)
-    await sequelize.sync({ force: true });
+    await migrationSequelize.sync({ force: true });
     console.log('✅ Tabulky úspěšně vytvořeny');
 
     console.log('🔄 Importuji testovací data...');
@@ -328,7 +418,7 @@ async function migrateAndImport() {
     console.error('❌ Chyba během migration/import:', error);
     throw error;
   } finally {
-    await sequelize.close();
+    await migrationSequelize.close();
   }
 }
 
